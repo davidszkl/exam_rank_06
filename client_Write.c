@@ -11,24 +11,27 @@
 
 void func(int sockfd)
 {
-    char buff[100000];
-    int n;
-    for (;;) {
-        bzero(buff, sizeof(buff));
-        printf("Enter the string : ");
-        n = 0;
-		read(STDIN_FILENO, buff, 100);
-		printf("entered the string:\n%s", buff);
-        write(sockfd, buff, sizeof(buff));
+	char write_buf[100000] = {0};
+
+	while (1)
+	{
+		write(1, "You> ", 5);
+		read(STDIN_FILENO, write_buf, 100);
+		if (write_buf[0] == '\n')
+		{
+			read(STDIN_FILENO, write_buf, 100);
+			send(sockfd, write_buf, 1, 0);
+			send(sockfd, NULL, 0, 0);
+			close(sockfd);
+			exit(1);
+		}
+		else
+		{
+			send(sockfd, write_buf, strlen(write_buf), 0);
+		}
 		printf("write  done\n");
-        bzero(buff, sizeof(buff));
-		read(sockfd, buff, sizeof(buff));
-        printf("%s", buff);
-        if ((strncmp(buff, "exit", 4)) == 0) {
-            printf("Client Exit...\n");
-            break;
-        }
-    }
+		bzero(write_buf, sizeof(write_buf));
+	}
 }
 
 int main()
