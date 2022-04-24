@@ -11,26 +11,14 @@
 
 void func(int sockfd)
 {
-	char write_buf[100000] = {0};
-	while (1)
-	{
-		write(1, "You> ", 5);
-		read(STDIN_FILENO, write_buf, 100);
-		if (write_buf[0] == '\n')
-		{
-			//read(STDIN_FILENO, write_buf, 100);
-			//send(sockfd, write_buf, 1, 0);
-			//send(sockfd, NULL, 0, 0);
-			//send(sockfd, NULL, 0, 0);
-			close(sockfd);
-			exit(1);
-		}
-		else
-		{
-			send(sockfd, write_buf, strlen(write_buf), 0);
-		}
-		bzero(write_buf, sizeof(write_buf));
-	}
+	char buf[10];
+	buf[0] = 'a';
+	buf[1] = '\n';
+	buf[2] = 'b';
+	buf[3] = '\n';
+	buf[4] = 0;
+
+	send(sockfd, buf, 5, 0);
 }
 
 int main()
