@@ -10,3 +10,5 @@ and also fixes some errors like checking for buf[strlen() - 1] without
 checking if the buffer isn't empty ...
 
 I did not pass the exam with this solution yet.
+
+(you're not required to write clients for the exam but it's nice to test your code)
