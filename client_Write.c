@@ -18,10 +18,6 @@ void func(int sockfd)
 		read(STDIN_FILENO, write_buf, 100);
 		if (write_buf[0] == '\n')
 		{
-			//read(STDIN_FILENO, write_buf, 100);
-			//send(sockfd, write_buf, 1, 0);
-			//send(sockfd, NULL, 0, 0);
-			//send(sockfd, NULL, 0, 0);
 			close(sockfd);
 			exit(1);
 		}

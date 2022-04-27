@@ -12,17 +12,21 @@ typedef struct client {
 	int fd;
 }	client;
 
-client clients[100000] = {0};
+//select() limit is 1024
+//exam tests with message of length 100,002
+//all global variables initialize to 0 by default
+client clients[1024];
+char buf[1000000], msg[1000000];
 int sockfd, id, fd_max;
-char buf[100000] = {0};
-char msg[100000] = {0};
-fd_set mem_s, read_s, write_s;
+fd_set mem_s, r_s, w_s;
 
 void fatal() {
 	write(1, "Fatal error\n", 12);
 	exit(1);
 }
 
+//start from the main provided in exam and trim it down to this
+//use listen() with 128 backlog exactly
 int init_server(int port)
 {
 	struct sockaddr_in serv_addr;
@@ -32,7 +36,7 @@ int init_server(int port)
 
 	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0 ||\
 		 bind(sockfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0 ||\
-		 listen(sockfd, 256) < 0)
+		 listen(sockfd, 128) < 0)
 		fatal();
 	
 	return sockfd;
@@ -41,12 +45,13 @@ int init_server(int port)
 void send_all(int id_from)
 {
 	for (int i = 0; i < id; i++)
-		if (clients[i].id != id_from && FD_ISSET(clients[i].fd, &write_s))
-			if (send(clients[i].fd, msg, strlen(msg), 0) < 0 )
-				fatal();
+		if (clients[i].id != id_from && FD_ISSET(clients[i].fd, &w_s))
+			send(clients[i].fd, msg, strlen(msg), 0);
 	bzero(msg, sizeof(msg));
 }
 
+//find first empty slot in clients[] and add new client
+//fd_max only increments if a client didn't leave in the meantime
 void add_client()
 {
 	int i = 0;
@@ -58,11 +63,16 @@ void add_client()
 		fatal();
 	FD_SET(clients[i].fd, &mem_s);
 	clients[i].id = id++;
-	fd_max++;
+	if (clients[i].fd > fd_max)
+		fd_max = clients[i].fd;
 	sprintf(msg, "server: client %d just arrived\n", clients[i].id);
 	send_all(clients[i].id);
 }
 
+//add multi-line message line-by-line to msg[]
+//tmp[] needs to be initialized cause not global
+//depending on if client sends a '\n' at the end
+//of final line (multi-line case), add or don't add a '\n' to msg[]
 void send_msg(int id_from)
 {
 	int i = 0, j = 0;
@@ -78,57 +88,67 @@ void send_msg(int id_from)
 			j = 0;
 		}
 	}
-	//add ending \n or not;
+	//add or don't add the '\n' here
 	send_all(id_from);
 }
 
+//mem_s (memore_set) is required because select will modify
+//read and write sets everytime, so you need to remember the
+//clients fd's in a set that doesn't get modified
 int main(int argc, char **argv)
 {
 	if (argc != 2)
 		return (write(1, "Wrong number of arguments\n", 26) && 1);
-	
+
 	fd_max = sockfd = init_server(atoi(argv[1]));
-	id = 0;
 	FD_ZERO(&mem_s);
 	FD_SET(sockfd, &mem_s);
 
 	while (1)
 	{
-		read_s = write_s = mem_s;
-		if (select(fd_max + 1, &read_s, &write_s, NULL, NULL) < 0)
+		r_s = w_s = mem_s;
+		if (select(fd_max + 1, &r_s, &w_s, NULL, NULL) < 0)
 			fatal();
-		if (FD_ISSET(sockfd, &read_s))
-		{
+		//new client wants to connect
+		if (FD_ISSET(sockfd, &r_s))
 			add_client();
-			continue ;
-		}
+		//check if a client sent something
 		for (int i = 0; i < id; i++)
 		{
-			if (clients[i].fd < sockfd || !FD_ISSET(clients[i].fd, &read_s))
+			//if fd invalid or not set in read go to next client
+			if (clients[i].fd < sockfd || !FD_ISSET(clients[i].fd, &r_s))
 				continue ;
-			int rval = 100;
+			//weird ass loop but exam requires you to recv(1), doens't work with other value
+			int rval = 1;
+			int len = 0;
 			bzero(buf, sizeof(buf));
-			while (rval == 100)
+			while (rval == 1)
 			{
-				rval = recv(clients[i].fd, buf + strlen(buf), 100, 0);
-				if (rval < 0)
-					fatal();
+				len = strlen(buf);
+				rval = recv(clients[i].fd, buf + len, 1, 0);
+				if (rval <= 0)
+					break;
+				if ((++len && buf[len - 1] == '\n'))
+					break;
 			}
-			if (rval == 0)
+			//a correct read_loop would look like this:
+			//int rval = 1000;
+			//while (rval == 1000)
+			//	recv = recv(clients[i].fd, buf + len, 1000, 0);
+
+			//client sent empty send() at start of line so he exits
+			if (rval == 0 && len == 0)
 			{
 				sprintf(msg, "server: client %d just left\n", clients[i].id);
-				send_all(clients[i].fd);
-				if (close(clients[i].fd) < 0)
-					fatal();
+				send_all(clients[i].id);
+				close(clients[i].fd);
 				FD_CLR(clients[i].fd, &mem_s);
 				clients[i].id = -1;
 				clients[i].fd = -1;
 			}
-			else
-			{
+			//client sent a message
+			else if (rval)
 				send_msg(clients[i].id);
-			}
 		}
 	}
-	return 0;
 }

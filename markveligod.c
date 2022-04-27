@@ -199,7 +199,7 @@ int main(int ac, char **av)
                     {
                         ret_recv = recv(fd, str + strlen(str), 1000, 0);
                         if (ret_recv <= 0)
-                            break ;
+                            fatal();
                     }
                     if (ret_recv <= 0)
                     {
