@@ -1,4 +1,4 @@
-#Exam rank 6
+# Exam rank 6
 make a simple chat server.
 I wrote a detailed and short version of this to help students pass the exam
 as it has some unspoken requirements to pass like the recv(1) or listen(backlog= 128)
