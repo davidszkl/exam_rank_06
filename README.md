@@ -9,4 +9,4 @@ is much simpler to implement and much shorter (nearly half as short)
 and also fixes some errors like checking for buf[strlen() - 1] without
 checking if the buffer isn't empty ...
 
-I did not pass the exam with this solution yet.
+I passed the exam with the same (very similar) code on May 3 2022

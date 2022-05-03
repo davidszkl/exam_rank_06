@@ -12,10 +12,9 @@ typedef struct client {
 	int fd;
 }	client;
 
-//select() limit is 1024
 //exam tests with message of length 100,002
 //all global variables initialize to 0 by default
-client clients[1024];
+client clients[10000];
 char buf[1000000], msg[1000000];
 int sockfd, id, fd_max;
 fd_set mem_s, r_s, w_s;
@@ -26,7 +25,8 @@ void fatal() {
 }
 
 //start from the main provided in exam and trim it down to this
-//use listen() with 128 backlog exactly
+//it is a rumour that you need a backlog of 128, it doesn't really
+//matter what the size of it is for this exam
 int init_server(int port)
 {
 	struct sockaddr_in serv_addr;
@@ -118,17 +118,14 @@ int main(int argc, char **argv)
 			//if fd invalid or not set in read go to next client
 			if (clients[i].fd < sockfd || !FD_ISSET(clients[i].fd, &r_s))
 				continue ;
-			//weird ass loop but exam requires you to recv(1), doens't work with other value
+			//it is a rumour that you need to recv(1), my friend passed with a
+			//recv of 5, if it doesn't pass there is probably an error elsewhere
 			int rval = 1;
-			int len = 0;
 			bzero(buf, sizeof(buf));
 			while (rval == 1)
 			{
-				len = strlen(buf);
-				rval = recv(clients[i].fd, buf + len, 1, 0);
-				if (rval <= 0)
-					break;
-				if ((++len && buf[len - 1] == '\n'))
+				rval = recv(clients[i].fd, buf + strlen(buf), 1, 0);
+				if (buf[strlen(buf) - 1] == '\n')
 					break;
 			}
 			//a correct read_loop would look like this:
@@ -137,7 +134,7 @@ int main(int argc, char **argv)
 			//	recv = recv(clients[i].fd, buf + len, 1000, 0);
 
 			//client sent empty send() at start of line so he exits
-			if (rval == 0 && len == 0)
+			if (rval == 0)
 			{
 				sprintf(msg, "server: client %d just left\n", clients[i].id);
 				send_all(clients[i].id);
