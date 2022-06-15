@@ -14,7 +14,8 @@ typedef struct client {
 
 //exam tests with message of length 100,002
 //all global variables initialize to 0 by default
-client clients[10000];
+//select has a limmit of 1024 readable FDs
+client clients[1024];
 char buf[1000000], msg[1000000];
 int sockfd, id, fd_max;
 fd_set mem_s, r_s, w_s;
@@ -55,7 +56,7 @@ void send_all(int id_from)
 void add_client()
 {
 	int i = 0;
-	while (clients[i].fd > 0 && i < 100000)
+	while (clients[i].fd > 0 && i < 1024)
 		i++;
 	struct sockaddr_in client_addr;
 	socklen_t len;
